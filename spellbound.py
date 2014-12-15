@@ -1,5 +1,5 @@
-import sys, string, requests, enchant # requests is for HTTP requests; enchant is for checking spelling
-
+import sys, string, requests, enchant,collections # requests is for HTTP requests; enchant is for checking spelling
+word_repeat_limit=3
 def most_popular(amount):
     # GitHub's API only allows us to return up to 100 results per page, so amount should be <= 100
     if amount > 100:
@@ -57,6 +57,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
     in_code=True#This indicates what character is bounding.
     comment_type=""
     skip_next=False
+    counted_comment_words=collections.Counter()#keeps track of words counted
     if file_type=="js":
         for i in range(len(text)):
             if skip_next:
@@ -70,6 +71,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                     current_word+=char
                 else:
                     code_words.add(current_word)
+
                     current_word=""
                     if char in string.uppercase:
                         current_word+=char.lower()
@@ -89,6 +91,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
+                        counted_comment_words[current_word]+=1
                         current_word=""
                     if char=="\n" and comment_type=='//':
                         in_code=True
@@ -125,12 +128,16 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
+                        counted_comment_words[current_word]+=1
                         current_word=""
                     if char=="\n" and comment_type=='#':
                         in_code=True
                         line_number+=1
                     elif char=="\n":
                         line_number+=1
+    for i in counted_comment_words:
+        if counted_comment_words[i]>=word_repeat_limit:#yes its 5 for now
+            code_words.add(i)
     return code_words.difference([""]),comment_words
 
 def words_in_file(text):
@@ -176,7 +183,6 @@ def check_spelling(owner,repo):
         excused_words = excused_words.union(code_words)
         for item in comment_words:
             word,line_number=item
-
             wordl = word.lower()
             if not dictionaryUS.check(wordl) and not dictionaryGB.check(wordl):
                 if not word in excused_words:
