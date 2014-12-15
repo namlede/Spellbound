@@ -24,24 +24,6 @@ def file_paths(owner,repo):
     files = [x for x in files if get_file_type(x) in ["js","py","rb"]] # we only can detect comments in certain file formats
     return files
 
-def get_comment(line,file_type): # if a given line is a comment, this returns the comment text; otherwise, it returns False
-    stripped_line = line.lstrip()
-    if stripped_line == "":
-        return False
-    elif file_type == "js":
-        if len(stripped_line) < 2:
-            return False
-        elif stripped_line[0:2] == "//":
-            return stripped_line[2:]
-        else:
-            return False
-    elif file_type in ["py","rb"]:
-        if stripped_line[0] == "#":
-            return stripped_line[1:]
-        else:
-            return False
-    else:
-        raise Exception("File format ." + file_type + " not recognized")
 
 def get_words(line):
     # returns a list of words in a given line (words can only include letters)
@@ -144,13 +126,6 @@ def words_in_file(text):
     wordset = set([])
     for line in text:
         wordset = wordset.union(get_words(line))
-    return wordset
-
-def words_outside_comments(text,file_type): #returns all the words in a file that are part of the actual code
-    wordset = set([])
-    for line in text:
-        if not get_comment(line,file_type):
-            wordset = wordset.union(get_words(line))
     return wordset
 
 def get_text(owner,repo,file_path):
