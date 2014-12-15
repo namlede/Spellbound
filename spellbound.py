@@ -48,9 +48,90 @@ def get_words(line):
     words = filter(lambda s: s.isalpha(),line.split())
     return set(words)
 
-def get_comments(text,file_type): #returns the line number and text of each single-line comment in a file
-    comments = [(line_index+1,get_comment(line,file_type)) for (line_index,line) in enumerate(text) if get_comment(line,file_type)]
-    return comments
+def get_word_types(text,file_type): #returns the line number and text of each single-line comment in a file
+    text="\n".join(text)
+    code_words=set([])
+    comment_words=set([])
+    line_number=1
+    current_word=""
+    in_code=True#This indicates what character is bounding.
+    comment_type=""
+    skip_next=False
+    if file_type=="js":
+        for i in range(len(text)):
+            if skip_next:
+                skip_next=False
+                continue
+            char=text[i]
+            if char=="\\":
+                skip_next=True
+            elif in_code:
+                if char in string.lowercase:
+                    current_word+=char
+                else:
+                    code_words.add(current_word)
+                    current_word=""
+                    if char in string.uppercase:
+                        current_word+=char.lower()
+                    elif char=="/" and text[i+1]=="/":
+                            skip_next=True
+                            in_code=False
+                            comment_type="//"
+                    elif char=="/" and text[i+1]=="*":
+                            skip_next=True
+                            in_code=False
+                            comment_type="/*"
+                    elif char=="\n":
+                        line_number+=1
+            else:
+                if char.lower() in string.lowercase:
+                    current_word+=char.lower()
+                else:
+                    if current_word!="":
+                        comment_words.add((current_word,line_number))
+                        current_word=""
+                    if char=="\n" and comment_type=='//':
+                        in_code=True
+                        line_number+=1
+                    elif char=="*" and text[i+1]=="/" and comment_type=='/*':
+                        in_code=True
+                        skip_next=True
+                    elif char=="\n":
+                        line_number+=1
+    elif file_type=="py":
+        for i in range(len(text)):
+            if skip_next:
+                skip_next=False
+                continue
+            char=text[i]
+            if char=="\\":
+                skip_next=True
+            elif in_code:
+                if char in string.lowercase:
+                    current_word+=char
+                else:
+                    code_words.add(current_word)
+                    current_word=""
+                    if char in string.uppercase:
+                        current_word+=char.lower()
+                    elif char=="#":
+                            in_code=False
+                            comment_type="#"
+                    elif char=="\n":
+                        line_number+=1
+            else:
+                if char.lower() in string.lowercase:
+                    current_word+=char.lower()
+                else:
+                    if current_word!="":
+                        comment_words.add((current_word,line_number))
+                        current_word=""
+                    if char=="\n" and comment_type=='#':
+                        in_code=True
+                        line_number+=1
+                    elif char=="\n":
+                        line_number+=1
+    return code_words.difference([""]),comment_words
 
 def words_in_file(text):
     wordset = set([])
@@ -78,7 +159,7 @@ def edits1(word): # this function is stolen from Peter Norvig's article http://n
    inserts    = [a + c + b     for a, b in splits for c in string.lowercase]
    return set(deletes + transposes + replaces + inserts)
 
-
+#from nltk.tag import pos_tag
 def check_spelling(owner,repo):
     dictionaryUS = enchant.Dict("en_US")
     dictionaryGB = enchant.Dict("en_GB")
@@ -88,26 +169,25 @@ def check_spelling(owner,repo):
     print("Done!")
     for path in paths:
         text = get_text(owner,repo,path)
-        code_words = words_outside_comments(text,get_file_type(path))
+        code_words,comment_words = get_word_types(text,get_file_type(path))
         # excused_words includes all the words in the repo outside the comments of the file under consideration
         # this way, we allow words that are "repo-specific"
         excused_words = set.union(*[words for (fpath,words) in special_words if fpath != path])
         excused_words = excused_words.union(code_words)
-        comments = get_comments(text,get_file_type(path))
-        for (line_number,comment) in comments:
-            word_list = filter(lambda s: s.isalpha(),comment.split())
-            for word in word_list:
-                wordl = word.lower()
-                if not dictionaryUS.check(wordl) and not dictionaryGB.check(wordl):
-                    if not word in excused_words:
-                        # to narrow down the list of candidates, we only look at words that are one edit away from real words
-                        edits = edits1(wordl)
-                        try:
-                            if True in map(lambda w: dictionaryUS.check(w), edits) or True in map(lambda w: dictionaryGB.check(w), edits):
-                                url = "https://github.com/" + owner + "/" + repo + "/blob/master/" + path + "#L" + str(line_number)
-                                print(word + " from " + url)
-                        except:
-                            print("Error on word " + word)
+        for item in comment_words:
+            word,line_number=item
+
+            wordl = word.lower()
+            if not dictionaryUS.check(wordl) and not dictionaryGB.check(wordl):
+                if not word in excused_words:
+                    # to narrow down the list of candidates, we only look at words that are one edit away from real words
+                    edits = edits1(wordl)
+                    try:
+                        if True in map(lambda w: dictionaryUS.check(w), edits) or True in map(lambda w: dictionaryGB.check(w), edits):
+                            url = "https://github.com/" + owner + "/" + repo + "/blob/master/" + path + "#L" + str(line_number)
+                            print(word + " from " + url)
+                    except:
+                        print("Error on word " + word)
 
 def main():
     if len(sys.argv) > 2:
