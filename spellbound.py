@@ -21,7 +21,7 @@ def file_paths(owner,repo,branch):
     files = [item["path"] for item in tree["tree"] if item["type"] == "blob"]
     # ignore hidden files
     files = [x for x in files if x[0] !="."]
-    files = [x for x in files if get_file_type(x) in ["js","py","rb","php","java"]] # we only can detect comments in certain file formats
+    files = [x for x in files if get_file_type(x) in ["js","py","rb","php","java","rs"]] # we only can detect comments in certain file formats
     return files
 
 
@@ -39,7 +39,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
     in_code=True#This indicates what character is bounding.
     comment_type=""
     skip_next=False
-    if file_type=="js" or file_type=="java":
+    if file_type=="js" or file_type=="java" or file_type=="rs":
         for i in range(len(text)):
             if skip_next:
                 skip_next=False
