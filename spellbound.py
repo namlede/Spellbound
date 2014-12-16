@@ -21,7 +21,7 @@ def file_paths(owner,repo):
     files = [item["path"] for item in tree["tree"] if item["type"] == "blob"]
     # ignore hidden files
     files = [x for x in files if x[0] !="."]
-    files = [x for x in files if get_file_type(x) in ["js","py","rb"]] # we only can detect comments in certain file formats
+    files = [x for x in files if get_file_type(x) in ["js","py","rb","php"]] # we only can detect comments in certain file formats
     return files
 
 
@@ -81,6 +81,54 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                     elif char=="*" and text[i+1]=="/" and comment_type=='/*':
                         in_code=True
                         skip_next=True
+                    elif char=="\n":
+                        line_number+=1
+    elif file_type=="php":
+        for i in range(len(text)):
+            if skip_next:
+                skip_next=False
+                continue
+            char=text[i]
+            if char=="\\":
+                skip_next=True
+            elif in_code:
+                if char in string.lowercase:
+                    current_word+=char
+                else:
+                    code_words.add(current_word)
+                    current_word=""
+                    if char in string.uppercase:
+                        current_word+=char.lower()
+                    elif char=="/" and text[i+1]=="/":
+                            skip_next=True
+                            in_code=False
+                            comment_type="//"
+                    elif char=="/" and text[i+1]=="*":
+                            skip_next=True
+                            in_code=False
+                            comment_type="/*"
+                    elif char=="#":
+                            in_code=False
+                            comment_type="#"
+                    elif char=="\n":
+                        line_number+=1
+            else:
+                if char.lower() in string.lowercase:
+                    current_word+=char.lower()
+                else:
+                    if current_word!="":
+                        comment_words.add((current_word,line_number))
+                        counted_comment_words[current_word]+=1
+                        current_word=""
+                    if char=="\n" and comment_type=='//':
+                        in_code=True
+                        line_number+=1
+                    elif char=="*" and text[i+1]=="/" and comment_type=='/*':
+                        in_code=True
+                        skip_next=True
+                    elif char=="\n" and comment_type=='#':
+                        in_code=True
+                        line_number+=1
                     elif char=="\n":
                         line_number+=1
     elif file_type=="py":
