@@ -15,8 +15,8 @@ def get_file_type(path):
     else:
         return ""
 
-def file_paths(owner,repo):
-    tree = requests.get("https://api.github.com/repos/" + owner + "/" + repo + "/git/trees/master?recursive=1").json()
+def file_paths(owner,repo,branch):
+    tree = requests.get("https://api.github.com/repos/" + owner + "/" + repo + "/git/trees/"+branch+"?recursive=1").json()
     # we look for the paths of files, not directories
     files = [item["path"] for item in tree["tree"] if item["type"] == "blob"]
     # ignore hidden files
@@ -176,8 +176,8 @@ def words_in_file(text):
         wordset = wordset.union(get_words(line))
     return wordset
 
-def get_text(owner,repo,file_path):
-    raw = requests.get("https://raw.githubusercontent.com/" + owner + "/" + repo + "/master/" + file_path).text
+def get_text(owner,repo,branch,file_path):
+    raw = requests.get("https://raw.githubusercontent.com/" + owner + "/" + repo + "/"+branch+"/" + file_path).text
     text = raw.split("\n")
     return text
 
@@ -190,15 +190,15 @@ def edits1(word): # this function is stolen from Peter Norvig's article http://n
    return set(deletes + transposes + replaces + inserts)
 
 #from nltk.tag import pos_tag
-def check_spelling(owner,repo):
+def check_spelling(owner,repo,branch="master"):
     dictionaryUS = enchant.Dict("en_US")
     dictionaryGB = enchant.Dict("en_GB")
-    paths = file_paths(owner,repo)
+    paths = file_paths(owner,repo,branch)
     print("Writing down domain-specific words....")
-    special_words = [(path,words_in_file(get_text(owner,repo,path))) for path in paths]
+    special_words = [(path,words_in_file(get_text(owner,repo,branch,path))) for path in paths]
     print("Done!")
     for path in paths:
-        text = get_text(owner,repo,path)
+        text = get_text(owner,repo,branch,path)
         code_words,comment_words = get_word_types(text,get_file_type(path))
         # excused_words includes all the words in the repo outside the comments of the file under consideration
         # this way, we allow words that are "repo-specific"
@@ -213,13 +213,15 @@ def check_spelling(owner,repo):
                     edits = edits1(wordl)
                     try:
                         if True in map(lambda w: dictionaryUS.check(w), edits) or True in map(lambda w: dictionaryGB.check(w), edits):
-                            url = "https://github.com/" + owner + "/" + repo + "/blob/master/" + path + "#L" + str(line_number)
+                            url = "https://github.com/" + owner + "/" + repo + "/blob/"+branch+"/" + path + "#L" + str(line_number)
                             print(word + " from " + url)
                     except:
                         print("Error on word " + word)
 
 def main():
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
+        check_spelling(sys.argv[1],sys.argv[2],sys.argv[3])
+    elif len(sys.argv)==3:
         check_spelling(sys.argv[1],sys.argv[2])
     else:
         for (owner,repo) in most_popular(int(sys.argv[1])):
