@@ -28,7 +28,8 @@ python spellbound.py [owner] [repository]
 
 searches for spelling errors in all the repositories owned by the specified user.
 
-```python spellbound.py [amount]
+```
+python spellbound.py [amount]
 ```
 
 searches for spelling errors in the [amount] most popular repositories on Github.
