@@ -1,5 +1,9 @@
 import sys, string, requests, enchant,collections # requests is for HTTP requests; enchant is for checking spelling
 word_repeat_limit=3
+counted_comment_words=collections.Counter()#keeps track of words counted
+dictionaryUS = enchant.Dict("en_US")
+dictionaryGB = enchant.Dict("en_GB")
+
 def most_popular(amount):
     # GitHub's API only allows us to return up to 100 results per page, so amount should be <= 100
     if amount > 100:
@@ -8,6 +12,11 @@ def most_popular(amount):
     popular = [tuple(repo["full_name"].split('/')) for repo in req.json()["items"]]
     # the format of the returned value is (owner,repo)
     return popular
+
+def get_owner_repos(owner):
+    req = requests.get("https://api.github.com/users/" + owner + "/repos")
+    repos = [tuple(repo["full_name"].split('/')) for repo in req.json()]
+    return repos
 
 def get_file_type(path):
     if "." in path:
@@ -29,7 +38,7 @@ def get_words(line):
     # returns a list of words in a given line (words can only include letters)
     words = filter(lambda s: s.isalpha(),line.split())
     return set(words)
-counted_comment_words=collections.Counter()#keeps track of words counted
+
 def get_word_types(text,file_type): #returns the line number and text of each single-line comment in a file
     text="\n".join(text)
     code_words=set([])
@@ -190,8 +199,6 @@ def edits1(word): # this function is stolen from Peter Norvig's article http://n
 
 #from nltk.tag import pos_tag
 def check_spelling(owner,repo,branch="master"):
-    dictionaryUS = enchant.Dict("en_US")
-    dictionaryGB = enchant.Dict("en_GB")
     paths = file_paths(owner,repo,branch)
     print("Writing down domain-specific words....")
     #special_words = [(path,words_in_file(get_text(owner,repo,branch,path))) for path in paths]
@@ -218,11 +225,17 @@ def main():
     if len(sys.argv) > 3:
         check_spelling(sys.argv[1],sys.argv[2],sys.argv[3])
     elif len(sys.argv)==3:
-        check_spelling(sys.argv[1],sys.argv[2])
+        if sys.argv[1] == "popular":
+            for (owner,repo) in most_popular(int(sys.argv[2])):
+                print("Checking " + owner + "/" + repo + "....")
+                check_spelling(owner,repo)
+        else:
+            check_spelling(sys.argv[1],sys.argv[2])
     else:
-        for (owner,repo) in most_popular(int(sys.argv[1])):
+        for (owner,repo) in get_owner_repos(sys.argv[1]):
             print("Checking " + owner + "/" + repo + "....")
             check_spelling(owner,repo)
+
 
 if __name__ == '__main__':
     main()
