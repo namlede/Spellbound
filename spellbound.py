@@ -26,6 +26,8 @@ def get_file_type(path):
 
 def file_paths(owner,repo,branch):
     tree = requests.get("https://api.github.com/repos/" + owner + "/" + repo + "/git/trees/"+branch+"?recursive=1").json()
+    if tree.has_key("message"):
+        return []
     # we look for the paths of files, not directories
     files = [item["path"] for item in tree["tree"] if item["type"] == "blob"]
     # ignore hidden files
