@@ -21,7 +21,7 @@ def file_paths(owner,repo,branch):
     files = [item["path"] for item in tree["tree"] if item["type"] == "blob"]
     # ignore hidden files
     files = [x for x in files if x[0] !="."]
-    files = [x for x in files if get_file_type(x) in ["js","py","rb","php"]] # we only can detect comments in certain file formats
+    files = [x for x in files if get_file_type(x) in ["js","py","rb","php","java"]] # we only can detect comments in certain file formats
     return files
 
 
@@ -29,7 +29,7 @@ def get_words(line):
     # returns a list of words in a given line (words can only include letters)
     words = filter(lambda s: s.isalpha(),line.split())
     return set(words)
-
+counted_comment_words=collections.Counter()#keeps track of words counted
 def get_word_types(text,file_type): #returns the line number and text of each single-line comment in a file
     text="\n".join(text)
     code_words=set([])
@@ -39,8 +39,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
     in_code=True#This indicates what character is bounding.
     comment_type=""
     skip_next=False
-    counted_comment_words=collections.Counter()#keeps track of words counted
-    if file_type=="js":
+    if file_type=="js" or file_type=="java":
         for i in range(len(text)):
             if skip_next:
                 skip_next=False
@@ -195,15 +194,12 @@ def check_spelling(owner,repo,branch="master"):
     dictionaryGB = enchant.Dict("en_GB")
     paths = file_paths(owner,repo,branch)
     print("Writing down domain-specific words....")
-    special_words = [(path,words_in_file(get_text(owner,repo,branch,path))) for path in paths]
+    #special_words = [(path,words_in_file(get_text(owner,repo,branch,path))) for path in paths]
     print("Done!")
     for path in paths:
         text = get_text(owner,repo,branch,path)
         code_words,comment_words = get_word_types(text,get_file_type(path))
-        # excused_words includes all the words in the repo outside the comments of the file under consideration
-        # this way, we allow words that are "repo-specific"
-        excused_words = set.union(*[words for (fpath,words) in special_words if fpath != path])
-        excused_words = excused_words.union(code_words)
+        excused_words = code_words
         for item in comment_words:
             word,line_number=item
             wordl = word.lower()
