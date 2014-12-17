@@ -1,4 +1,4 @@
-import sys, string, requests, enchant,collections # requests is for HTTP requests; enchant is for checking spelling
+import sys, string, requests, enchant,collections,data_getter,time # requests is for HTTP requests; enchant is for checking spelling
 word_repeat_limit=3
 def most_popular(amount):
     # GitHub's API only allows us to return up to 100 results per page, so amount should be <= 100
@@ -31,7 +31,6 @@ def get_words(line):
     return set(words)
 counted_comment_words=collections.Counter()#keeps track of words counted
 def get_word_types(text,file_type): #returns the line number and text of each single-line comment in a file
-    text="\n".join(text)
     code_words=set([])
     comment_words=set([])
     line_number=1
@@ -188,16 +187,23 @@ def edits1(word): # this function is stolen from Peter Norvig's article http://n
    inserts    = [a + c + b     for a, b in splits for c in string.lowercase]
    return set(deletes + transposes + replaces + inserts)
 
+
 #from nltk.tag import pos_tag
 def check_spelling(owner,repo,branch="master"):
     dictionaryUS = enchant.Dict("en_US")
     dictionaryGB = enchant.Dict("en_GB")
     paths = file_paths(owner,repo,branch)
-    print("Writing down domain-specific words....")
-    #special_words = [(path,words_in_file(get_text(owner,repo,branch,path))) for path in paths]
-    print("Done!")
+    print("Setting up requests.")
+    data_getter.init()
     for path in paths:
-        text = get_text(owner,repo,branch,path)
+        data_getter.get_text(owner,repo,branch,path)
+    print("Getting Text.")
+    a=time.time()
+    data_getter.start()
+    print("Got text in %s seconds"%(str(time.time()-a)))
+    print("Analyzing Text.")
+    for path in paths:
+        text = data_getter.data[path]
         code_words,comment_words = get_word_types(text,get_file_type(path))
         excused_words = code_words
         for item in comment_words:
