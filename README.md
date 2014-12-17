@@ -16,6 +16,20 @@ Then just clone spellbound.py!
 
 Usage
 -----
-Running `python spellbound.py [owner] [repository]` will search for spelling errors in that repo.
+```
+python spellbound.py [owner] [repository]`
+```
 
-Running `python spellbound.py [amount]` will search for spelling errors in the [amount] most popular repositories on Github.
+searches for spelling errors in the specified repo.
+
+```
+python spellbound.py [owner] [repository]
+``` 
+
+searches for spelling errors in all the repositories owned by the specified user.
+
+```
+python spellbound.py [amount]
+```
+
+searches for spelling errors in the [amount] most popular repositories on Github.
