@@ -32,7 +32,7 @@ def file_paths(owner,repo,branch):
     files = [item["path"] for item in tree["tree"] if item["type"] == "blob"]
     # ignore hidden files
     files = [x for x in files if x[0] !="."]
-    files = [x for x in files if get_file_type(x) in ["js","py","rb","php","java","rs","c"]] # we only can detect comments in certain file formats
+    files = [x for x in files if get_file_type(x) in ["js","py","rb","php","java","rs","c","md","txt"]] # we only can detect comments in certain file formats
     return files
 
 
@@ -174,6 +174,16 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                         line_number+=1
                     elif char=="\n":
                         line_number+=1
+    elif file_type in ["md","txt"]:
+        in_code=False
+        for i in range(len(text)):
+            char=text[i]
+            if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
+                    current_word+=char.lower()
+            elif current_word!="":
+                    comment_words.add((current_word,line_number))
+                    if adding: counted_comment_words[current_word]+=1
+                    current_word=""
     for i in counted_comment_words:
         if counted_comment_words[i]>=word_repeat_limit:#yes its 5 for now
             code_words.add(i)
