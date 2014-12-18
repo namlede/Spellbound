@@ -17,6 +17,7 @@ def most_popular(amount):
 def get_owner_repos(owner):
     #not caching...
     req = requests.get("https://api.github.com/users/" + owner + "/repos")
+    print req.json()
     repos = [tuple(repo["full_name"].split('/')) for repo in req.json()]
     return repos
 
@@ -79,7 +80,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                     elif char=="\n":
                         line_number+=1
             else:
-                if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
+                if char.lower() in string.lowercase or (current_word and char in ("'", "\xe2\x80\x99")  and (text[i+1] in string.lowercase)):
                     current_word+=char
                 else:
                     if current_word!="":
@@ -124,7 +125,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                     elif char=="\n":
                         line_number+=1
             else:
-                if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
+                if char.lower() in string.lowercase or (current_word and char in ("'", "\xe2\x80\x99")  and (text[i+1] in string.lowercase)):
                     current_word+=char
                 else:
                     if current_word!="":
@@ -164,7 +165,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                     elif char=="\n":
                         line_number+=1
             else:
-                if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
+                if char.lower() in string.lowercase or (current_word and char in ("'", "\xe2\x80\x99")  and (text[i+1] in string.lowercase)):
                     current_word+=char
                 else:
                     if current_word!="":
@@ -180,7 +181,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
         in_code=False
         for i in range(len(text)):
             char=text[i]
-            if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
+            if char.lower() in string.lowercase or (current_word and char in ("'", "\xe2\x80\x99")  and (text[i+1] in string.lowercase)):
                     current_word+=char
             elif current_word!="":
                     comment_words.add((current_word,line_number))
@@ -240,7 +241,7 @@ def check_spelling(owner,repo,branch="master",using_nltk=False):
             word,line_number=item
             if len(word)<=2: #skip really short words
                 continue
-            if word[-2:]=="'s":#ignore ending in 's
+            if word[-2:] in ("'s","\xe2\x80\x99s"):#ignore ending in 's
                 word=word[:-2]
             if using_nltk and pos_tag([word])[0][1]=="NNP":
                 continue

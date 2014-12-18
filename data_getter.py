@@ -29,7 +29,10 @@ def getStatus(ourl):
         #From: http://stackoverflow.com/questions/8344315/create-path-and-filename-from-string-in-python
         # create directory if it does not exist
         if not os.path.exists(dir_name):
-            makedirs(dir_name)
+            try:
+                makedirs(dir_name)
+            except:
+                pass #async problems
         to_cache_file=open(file_path,"w")
         to_cache_file.write(res.read())
         to_cache_file.close()
