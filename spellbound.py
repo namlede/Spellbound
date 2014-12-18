@@ -8,7 +8,7 @@ def most_popular(amount):
     # GitHub's API only allows us to return up to 100 results per page, so amount should be <= 100
     if amount > 100:
         raise Exception("amount must be less than or equal to 100")
-    req = requests.get("https://api.github.com/search/repositories?q=stars:>0&per_page=" + str(amount))
+    req = requests.get("https://api.github.com/search/repositories?q=stars:>0&per_page=" + str(amount)+str(secret))
     popular = [tuple(repo["full_name"].split('/')) for repo in req.json()["items"]]
     # the format of the returned value is (owner,repo)
     return popular
@@ -25,14 +25,14 @@ def get_file_type(path):
         return ""
 
 def file_paths(owner,repo,branch):
-    tree = requests.get("https://api.github.com/repos/" + owner + "/" + repo + "/git/trees/"+branch+"?recursive=1").json()
+    tree = requests.get("https://api.github.com/repos/" + owner + "/" + repo + "/git/trees/"+branch+"?recursive=1"+str(secret)).json()
     if tree.has_key("message"):
         return []
     # we look for the paths of files, not directories
     files = [item["path"] for item in tree["tree"] if item["type"] == "blob"]
     # ignore hidden files
     files = [x for x in files if x[0] !="."]
-    files = [x for x in files if get_file_type(x) in ["js","py","rb","php","java","rs"]] # we only can detect comments in certain file formats
+    files = [x for x in files if get_file_type(x) in ["js","py","rb","php","java","rs","c"]] # we only can detect comments in certain file formats
     return files
 
 
@@ -49,7 +49,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
     in_code=True#This indicates what character is bounding.
     comment_type=""
     skip_next=False
-    if file_type=="js" or file_type=="java" or file_type=="rs":
+    if file_type in ("js","c","rs","java"):
         for i in range(len(text)):
             if skip_next:
                 skip_next=False
@@ -77,7 +77,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                     elif char=="\n":
                         line_number+=1
             else:
-                if char.lower() in string.lowercase:
+                if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
                     current_word+=char.lower()
                 else:
                     if current_word!="":
@@ -122,7 +122,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                     elif char=="\n":
                         line_number+=1
             else:
-                if char.lower() in string.lowercase:
+                if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
                     current_word+=char.lower()
                 else:
                     if current_word!="":
@@ -162,7 +162,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                     elif char=="\n":
                         line_number+=1
             else:
-                if char.lower() in string.lowercase:
+                if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
                     current_word+=char.lower()
                 else:
                     if current_word!="":
@@ -185,11 +185,6 @@ def words_in_file(text):
         wordset = wordset.union(get_words(line))
     return wordset
 
-def get_text(owner,repo,branch,file_path):
-    raw = requests.get("https://raw.githubusercontent.com/" + owner + "/" + repo + "/"+branch+"/" + file_path).text
-    text = raw.split("\n")
-    return text
-
 def edits1(word): # this function is stolen from Peter Norvig's article http://norvig.com/spell-correct.html
    splits     = [(word[:i], word[i:]) for i in range(len(word) + 1)]
    deletes    = [a + b[1:] for a, b in splits if b]
@@ -198,19 +193,28 @@ def edits1(word): # this function is stolen from Peter Norvig's article http://n
    inserts    = [a + c + b     for a, b in splits for c in string.lowercase]
    return set(deletes + transposes + replaces + inserts)
 
-
 #from nltk.tag import pos_tag
 def check_spelling(owner,repo,branch="master"):
-    paths = file_paths(owner,repo,branch)
+
+    print("Getting file paths.")
+    start_time=time.time()
+    paths = filter(get_file_type, file_paths(owner,repo,branch))
+    print("Getting paths took %s seconds."%(str(time.time()-start_time)))
+
     print("Setting up requests.")
-    data_getter.init()
+    start_time=time.time()
+    data_getter.init(secret)
     for path in paths:
-        data_getter.get_text(owner,repo,branch,path)
-    print("Getting Text.")
-    a=time.time()
+        if get_file_type(path):
+            data_getter.get_text(owner,repo,branch,path)
+    print("Setting up took %s seconds."%(str(time.time()-start_time)))
+
+    print("Getting text.")
+    start_time=time.time()
     data_getter.start()
-    print("Got text in %s seconds"%(str(time.time()-a)))
-    print("Analyzing Text.")
+    print("Got text in %s seconds."%(str(time.time()-start_time)))
+    print("Analyzing text.")
+    start_time=time.time()
     for path in paths:
         text = data_getter.data[path]
         code_words,comment_words = get_word_types(text,get_file_type(path))
@@ -228,9 +232,13 @@ def check_spelling(owner,repo,branch="master"):
                             print(word + " from " + url)
                     except:
                         print("Error on word " + word)
-
+    print("Analyzing text took %s seconds"%(str(time.time()-start_time)))
+secret=""
 def main():
-    if len(sys.argv) > 3:
+    if sys.argv[1]=="secret":
+        secret="&client_id="+sys.argv[2]+"&client_secret="+sys.argv[3]
+        sys.argv=[sys.argv[1]]+sys.argv[4:]
+    if len(sys.argv) == 4:
         check_spelling(sys.argv[1],sys.argv[2],sys.argv[3])
     elif len(sys.argv)==3:
         if sys.argv[1] == "popular":
