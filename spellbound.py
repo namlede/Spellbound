@@ -65,7 +65,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
 
                     current_word=""
                     if char in string.uppercase:
-                        current_word+=char.lower()
+                        current_word+=char
                     elif char=="/" and text[i+1]=="/":
                             skip_next=True
                             in_code=False
@@ -78,7 +78,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                         line_number+=1
             else:
                 if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
-                    current_word+=char.lower()
+                    current_word+=char
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
@@ -107,7 +107,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                     code_words.add(current_word)
                     current_word=""
                     if char in string.uppercase:
-                        current_word+=char.lower()
+                        current_word+=char
                     elif char=="/" and text[i+1]=="/":
                             skip_next=True
                             in_code=False
@@ -123,7 +123,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                         line_number+=1
             else:
                 if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
-                    current_word+=char.lower()
+                    current_word+=char
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
@@ -155,7 +155,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                     code_words.add(current_word)
                     current_word=""
                     if char in string.uppercase:
-                        current_word+=char.lower()
+                        current_word+=char
                     elif char=="#":
                             in_code=False
                             comment_type="#"
@@ -163,7 +163,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
                         line_number+=1
             else:
                 if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
-                    current_word+=char.lower()
+                    current_word+=char
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
@@ -179,7 +179,7 @@ def get_word_types(text,file_type,adding=False): #returns the line number and te
         for i in range(len(text)):
             char=text[i]
             if char.lower() in string.lowercase or (current_word and char=="'" and (text[i+1] in string.lowercase)):
-                    current_word+=char.lower()
+                    current_word+=char
             elif current_word!="":
                     comment_words.add((current_word,line_number))
                     if adding: counted_comment_words[current_word]+=1
@@ -203,9 +203,8 @@ def edits1(word): # this function is stolen from Peter Norvig's article http://n
    inserts    = [a + c + b     for a, b in splits for c in string.lowercase]
    return set(deletes + transposes + replaces + inserts)
 
-#from nltk.tag import pos_tag
-def check_spelling(owner,repo,branch="master"):
 
+def check_spelling(owner,repo,branch="master",nltk=False):
     print("Getting file paths.")
     start_time=time.time()
     paths = filter(get_file_type, file_paths(owner,repo,branch))
@@ -239,6 +238,9 @@ def check_spelling(owner,repo,branch="master"):
             word,line_number=item
             if len(word)<=2: #skip really short words
                 continue
+            if nltk and pos_tag([word])[0][1]=="NNS":
+                continue
+            word=word.lower()
             if word[-2:]=="'s":#ignore ending in 's
                 word=word[:-2]
             wordl = word.lower()
@@ -255,22 +257,27 @@ def check_spelling(owner,repo,branch="master"):
     print("Finding misspellings took %s seconds"%(str(time.time()-start_time)))
 secret=""
 def main():
+    using_nltk=False
+    if sys.argv[1]=="nltk":
+        from nltk.tag import pos_tag
+        using_nltk=True
+        sys.argv=[sys.argv[0]]+sys.argv[2:]
     if sys.argv[1]=="secret":
         secret="&client_id="+sys.argv[2]+"&client_secret="+sys.argv[3]
-        sys.argv=[sys.argv[1]]+sys.argv[4:]
+        sys.argv=[sys.argv[0]]+sys.argv[4:]
     if len(sys.argv) == 4:
-        check_spelling(sys.argv[1],sys.argv[2],sys.argv[3])
+        check_spelling(sys.argv[1],sys.argv[2],sys.argv[3],using_nltk=using_nltk)
     elif len(sys.argv)==3:
         if sys.argv[1] == "popular":
             for (owner,repo) in most_popular(int(sys.argv[2])):
                 print("Checking " + owner + "/" + repo + "....")
-                check_spelling(owner,repo)
+                check_spelling(owner,repo,using_nltk=using_nltk)
         else:
             check_spelling(sys.argv[1],sys.argv[2])
     else:
         for (owner,repo) in get_owner_repos(sys.argv[1]):
             print("Checking " + owner + "/" + repo + "....")
-            check_spelling(owner,repo)
+            check_spelling(owner,repo,using_nltk=using_nltk)
 
 
 if __name__ == '__main__':
