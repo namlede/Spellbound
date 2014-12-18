@@ -41,7 +41,7 @@ def get_words(line):
     words = filter(lambda s: s.isalpha(),line.split())
     return set(words)
 
-def get_word_types(text,file_type): #returns the line number and text of each single-line comment in a file
+def get_word_types(text,file_type,adding=False): #returns the line number and text of each single-line comment in a file
     code_words=set([])
     comment_words=set([])
     line_number=1
@@ -82,7 +82,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
-                        counted_comment_words[current_word]+=1
+                        if adding: counted_comment_words[current_word]+=1
                         current_word=""
                     if char=="\n" and comment_type=='//':
                         in_code=True
@@ -127,7 +127,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
-                        counted_comment_words[current_word]+=1
+                        if adding: counted_comment_words[current_word]+=1
                         current_word=""
                     if char=="\n" and comment_type=='//':
                         in_code=True
@@ -167,7 +167,7 @@ def get_word_types(text,file_type): #returns the line number and text of each si
                 else:
                     if current_word!="":
                         comment_words.add((current_word,line_number))
-                        counted_comment_words[current_word]+=1
+                        if adding: counted_comment_words[current_word]+=1
                         current_word=""
                     if char=="\n" and comment_type=='#':
                         in_code=True
@@ -212,8 +212,14 @@ def check_spelling(owner,repo,branch="master"):
     print("Getting text.")
     start_time=time.time()
     data_getter.start()
-    print("Got text in %s seconds."%(str(time.time()-start_time)))
-    print("Analyzing text.")
+    print("Getting text took %s seconds."%(str(time.time()-start_time)))
+    print("Counting words.")
+    start_time=time.time()
+    for path in paths:
+        text = data_getter.data[path]
+        get_word_types(text,get_file_type(path),True)#Adding to counted_comment_words
+    print("Counting words took %s seconds."%(str(time.time()-start_time)))
+    print("Finding misspellings.")
     start_time=time.time()
     for path in paths:
         text = data_getter.data[path]
@@ -234,7 +240,7 @@ def check_spelling(owner,repo,branch="master"):
                             print(word + " from " + url)
                     except:
                         print("Error on word " + word)
-    print("Analyzing text took %s seconds"%(str(time.time()-start_time)))
+    print("Finding misspellings took %s seconds"%(str(time.time()-start_time)))
 secret=""
 def main():
     if sys.argv[1]=="secret":
