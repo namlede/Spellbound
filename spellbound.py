@@ -239,6 +239,8 @@ def check_spelling(owner,repo,branch="master"):
             word,line_number=item
             if len(word)<=2: #skip really short words
                 continue
+            if word[-2:]=="'s":#ignore ending in 's
+                word=word[:-2]
             wordl = word.lower()
             if not dictionaryUS.check(wordl) and not dictionaryGB.check(wordl):
                 if not word in excused_words:
