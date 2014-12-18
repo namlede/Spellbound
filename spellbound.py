@@ -1,4 +1,5 @@
 import sys, string, requests, enchant,collections,data_getter,time # requests is for HTTP requests; enchant is for checking spelling
+from nltk.tag import pos_tag
 word_repeat_limit=3
 counted_comment_words=collections.Counter()#keeps track of words counted
 dictionaryUS = enchant.Dict("en_US")
@@ -14,6 +15,7 @@ def most_popular(amount):
     return popular
 
 def get_owner_repos(owner):
+    #not caching...
     req = requests.get("https://api.github.com/users/" + owner + "/repos")
     repos = [tuple(repo["full_name"].split('/')) for repo in req.json()]
     return repos
@@ -204,7 +206,7 @@ def edits1(word): # this function is stolen from Peter Norvig's article http://n
    return set(deletes + transposes + replaces + inserts)
 
 
-def check_spelling(owner,repo,branch="master",nltk=False):
+def check_spelling(owner,repo,branch="master",using_nltk=False):
     print("Getting file paths.")
     start_time=time.time()
     paths = filter(get_file_type, file_paths(owner,repo,branch))
@@ -238,11 +240,10 @@ def check_spelling(owner,repo,branch="master",nltk=False):
             word,line_number=item
             if len(word)<=2: #skip really short words
                 continue
-            if nltk and pos_tag([word])[0][1]=="NNS":
-                continue
-            word=word.lower()
             if word[-2:]=="'s":#ignore ending in 's
                 word=word[:-2]
+            if using_nltk and pos_tag([word])[0][1]=="NNP":
+                continue
             wordl = word.lower()
             if not dictionaryUS.check(wordl) and not dictionaryGB.check(wordl):
                 if not word in excused_words:
@@ -259,7 +260,6 @@ secret=""
 def main():
     using_nltk=False
     if sys.argv[1]=="nltk":
-        from nltk.tag import pos_tag
         using_nltk=True
         sys.argv=[sys.argv[0]]+sys.argv[2:]
     if sys.argv[1]=="secret":
@@ -273,7 +273,7 @@ def main():
                 print("Checking " + owner + "/" + repo + "....")
                 check_spelling(owner,repo,using_nltk=using_nltk)
         else:
-            check_spelling(sys.argv[1],sys.argv[2])
+            check_spelling(sys.argv[1],sys.argv[2],using_nltk=using_nltk)
     else:
         for (owner,repo) in get_owner_repos(sys.argv[1]):
             print("Checking " + owner + "/" + repo + "....")

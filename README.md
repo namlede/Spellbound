@@ -24,7 +24,7 @@ searches for spelling errors in the specified repo.
 
 ```
 python spellbound.py [owner] [repository]
-``` 
+```
 
 searches for spelling errors in all the repositories owned by the specified user.
 
