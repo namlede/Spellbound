@@ -221,6 +221,8 @@ def check_spelling(owner,repo,branch="master"):
         excused_words = code_words
         for item in comment_words:
             word,line_number=item
+            if len(word)<=2: #skip really short words
+                continue
             wordl = word.lower()
             if not dictionaryUS.check(wordl) and not dictionaryGB.check(wordl):
                 if not word in excused_words:
